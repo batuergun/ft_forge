@@ -1,0 +1,28 @@
+# Compiled binaries
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+
+# Test files
+test-project/
+bad-project/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Temporary files
+*.tmp
+*.temp

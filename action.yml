@@ -1,0 +1,45 @@
+name: '42 Norminette & Build Check'
+description: 'Runs norminette on C projects and verifies successful compilation for 42 projects'
+author: 'batuergun'
+
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+inputs:
+  project_path:
+    description: 'Path to the C project directory (relative to repository root)'
+    required: false
+    default: '.'
+  makefile_target:
+    description: 'Makefile target to build (e.g., all, bonus)'
+    required: false
+    default: 'all'
+  norminette_flags:
+    description: 'Additional flags to pass to norminette'
+    required: false
+    default: ''
+  strict_mode:
+    description: 'Fail the action if norminette finds any violations'
+    required: false
+    default: 'true'
+  build_only:
+    description: 'Only run build check, skip norminette'
+    required: false
+    default: 'false'
+  norminette_only:
+    description: 'Only run norminette, skip build check'
+    required: false
+    default: 'false'
+
+outputs:
+  norminette_status:
+    description: 'Status of norminette check (passed/failed/skipped)'
+  build_status:
+    description: 'Status of build check (passed/failed/skipped)'
+  norminette_violations:
+    description: 'Number of norminette violations found'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'

@@ -1,0 +1,88 @@
+# Example workflow for repositories with multiple 42 projects
+# Place this file in .github/workflows/ci.yml in your multi-project repository
+
+name: Multi-Project CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      libft: ${{ steps.changes.outputs.libft }}
+      cub3d: ${{ steps.changes.outputs.cub3d }}
+      minishell: ${{ steps.changes.outputs.minishell }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          libft:
+            - 'libft/**'
+          cub3d:
+            - 'cub3d/**'
+          minishell:
+            - 'minishell/**'
+
+  test-libft:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.libft == 'true'
+    name: Test Libft
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Test Libft Mandatory
+      uses: batuergun/ft_forge@v1
+      with:
+        project_path: 'libft'
+        makefile_target: 'all'
+        strict_mode: 'true'
+        
+    - name: Test Libft Bonus
+      uses: batuergun/ft_forge@v1
+      with:
+        project_path: 'libft'
+        makefile_target: 'bonus'
+        strict_mode: 'true'
+
+  test-cub3d:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.cub3d == 'true'
+    name: Test Cub3D
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Test Cub3D
+      uses: batuergun/ft_forge@v1
+      with:
+        project_path: 'cub3d'
+        makefile_target: 'all'
+        strict_mode: 'true'
+
+  test-minishell:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.minishell == 'true'
+    name: Test Minishell
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Test Minishell
+      uses: batuergun/ft_forge@v1
+      with:
+        project_path: 'minishell'
+        makefile_target: 'all'
+        strict_mode: 'true'

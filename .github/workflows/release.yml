@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Get tag name
+      id: get_tag
+      run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_tag.outputs.TAG }}
+        release_name: Release ${{ steps.get_tag.outputs.TAG }}
+        body: |
+          ## Changes in ${{ steps.get_tag.outputs.TAG }}
+          
+          ### Features
+          - Norminette checking for 42 School C projects
+          - Build verification with Makefile
+          - Configurable options and targets
+          - Support for multiple project structures
+          
+          ### Usage
+          ```yaml
+          - uses: batuergun/ft_forge@${{ steps.get_tag.outputs.TAG }}
+            with:
+              project_path: '.'
+              makefile_target: 'all'
+              strict_mode: 'true'
+          ```
+          
+          See the [README](https://github.com/batuergun/ft_forge/blob/main/README.md) for detailed usage instructions.
+          
+        draft: false
+        prerelease: false

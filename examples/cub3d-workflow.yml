@@ -1,0 +1,57 @@
+# Example workflow for cub3d project
+# Place this file in .github/workflows/ci.yml in your cub3d repository
+
+name: Cub3D CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  norminette-check:
+    runs-on: ubuntu-latest
+    name: Code Style Check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Norminette Check
+      uses: batuergun/ft_forge@v1
+      with:
+        project_path: '.'
+        norminette_only: 'true'
+        strict_mode: 'true'
+
+  build-check:
+    runs-on: ubuntu-latest
+    name: Build Verification
+    needs: norminette-check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Build Project
+      uses: batuergun/ft_forge@v1
+      with:
+        project_path: '.'
+        makefile_target: 'all'
+        build_only: 'true'
+        
+  full-check:
+    runs-on: ubuntu-latest
+    name: Full Check (Norminette + Build)
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Complete Check
+      uses: batuergun/ft_forge@v1
+      with:
+        project_path: '.'
+        makefile_target: 'all'
+        strict_mode: 'true'

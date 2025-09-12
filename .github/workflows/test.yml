@@ -1,0 +1,195 @@
+name: Test Action
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    name: Test the action
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Create test C project
+      run: |
+        mkdir -p test-project/src test-project/include
+        
+        # Create a simple C file that follows norminette
+        cat > test-project/src/main.c << 'EOF'
+        /* ************************************************************************** */
+        /*                                                                            */
+        /*                                                        :::      ::::::::   */
+        /*   main.c                                             :+:      :+:    :+:   */
+        /*                                                    +:+ +:+         +:+     */
+        /*   By: test <test@student.42.fr>                    +#+  +:+       +#+        */
+        /*                                                +#+#+#+#+#+   +#+           */
+        /*   Created: 2024/01/01 10:00:00 by test              #+#    #+#             */
+        /*   Updated: 2024/01/01 10:00:00 by test             ###   ########.fr       */
+        /*                                                                            */
+        /* ************************************************************************** */
+
+        #include "test.h"
+
+        int	main(void)
+        {
+        	ft_putstr("Hello, 42 School!\n");
+        	return (0);
+        }
+        EOF
+        
+        # Create a header file
+        cat > test-project/include/test.h << 'EOF'
+        /* ************************************************************************** */
+        /*                                                                            */
+        /*                                                        :::      ::::::::   */
+        /*   test.h                                             :+:      :+:    :+:   */
+        /*                                                    +:+ +:+         +:+     */
+        /*   By: test <test@student.42.fr>                    +#+  +:+       +#+        */
+        /*                                                +#+#+#+#+#+   +#+           */
+        /*   Created: 2024/01/01 10:00:00 by test              #+#    #+#             */
+        /*   Updated: 2024/01/01 10:00:00 by test             ###   ########.fr       */
+        /*                                                                            */
+        /* ************************************************************************** */
+
+        #ifndef TEST_H
+        # define TEST_H
+
+        # include <unistd.h>
+
+        void	ft_putstr(char *str);
+
+        #endif
+        EOF
+        
+        # Create utils.c
+        cat > test-project/src/utils.c << 'EOF'
+        /* ************************************************************************** */
+        /*                                                                            */
+        /*                                                        :::      ::::::::   */
+        /*   utils.c                                            :+:      :+:    :+:   */
+        /*                                                    +:+ +:+         +:+     */
+        /*   By: test <test@student.42.fr>                    +#+  +:+       +#+        */
+        /*                                                +#+#+#+#+#+   +#+           */
+        /*   Created: 2024/01/01 10:00:00 by test              #+#    #+#             */
+        /*   Updated: 2024/01/01 10:00:00 by test             ###   ########.fr       */
+        /*                                                                            */
+        /* ************************************************************************** */
+
+        #include "test.h"
+
+        void	ft_putstr(char *str)
+        {
+        	int	i;
+
+        	i = 0;
+        	while (str[i])
+        	{
+        		write(1, &str[i], 1);
+        		i++;
+        	}
+        }
+        EOF
+        
+        # Create Makefile
+        cat > test-project/Makefile << 'EOF'
+        NAME = test_program
+
+        CC = gcc
+        CFLAGS = -Wall -Wextra -Werror
+        
+        SRCDIR = src
+        INCDIR = include
+        
+        SOURCES = $(SRCDIR)/main.c $(SRCDIR)/utils.c
+        OBJECTS = $(SOURCES:.c=.o)
+        
+        all: $(NAME)
+        
+        $(NAME): $(OBJECTS)
+        	$(CC) $(CFLAGS) -o $(NAME) $(OBJECTS)
+        
+        %.o: %.c
+        	$(CC) $(CFLAGS) -I$(INCDIR) -c $< -o $@
+        
+        clean:
+        	rm -f $(OBJECTS)
+        
+        fclean: clean
+        	rm -f $(NAME)
+        
+        re: fclean all
+        
+        .PHONY: all clean fclean re
+        EOF
+        
+    - name: Test action with valid C project
+      uses: ./
+      with:
+        project_path: 'test-project'
+        makefile_target: 'all'
+        strict_mode: 'true'
+        
+    - name: Test norminette only
+      uses: ./
+      with:
+        project_path: 'test-project'
+        norminette_only: 'true'
+        
+    - name: Test build only
+      uses: ./
+      with:
+        project_path: 'test-project'
+        build_only: 'true'
+        
+    - name: Create project with norminette violations
+      run: |
+        mkdir -p bad-project
+        
+        # Create a C file with norminette violations
+        cat > bad-project/bad.c << 'EOF'
+        #include <stdio.h>
+
+        int main(){
+            printf("This has violations\n");
+            return 0;
+        }
+        EOF
+        
+        # Create simple Makefile
+        cat > bad-project/Makefile << 'EOF'
+        all:
+        	gcc -o bad bad.c
+        clean:
+        	rm -f bad
+        fclean: clean
+        .PHONY: all clean fclean
+        EOF
+        
+    - name: Test action with violations (non-strict mode)
+      uses: ./
+      with:
+        project_path: 'bad-project'
+        strict_mode: 'false'
+        
+    - name: Test action with violations (should fail in strict mode)
+      uses: ./
+      continue-on-error: true
+      id: strict_test
+      with:
+        project_path: 'bad-project'
+        strict_mode: 'true'
+        
+    - name: Verify strict mode failed as expected
+      run: |
+        if [ "${{ steps.strict_test.outcome }}" != "failure" ]; then
+          echo "ERROR: Strict mode should have failed but didn't"
+          exit 1
+        else
+          echo "SUCCESS: Strict mode correctly failed on violations"
+        fi
