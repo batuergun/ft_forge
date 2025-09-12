@@ -17,17 +17,11 @@ RUN apt-get update && apt-get install -y \
 # Install norminette
 RUN pip3 install --no-cache-dir norminette
 
-# Create a non-root user for security
-RUN useradd -m -s /bin/bash runner
-
-# Copy the entrypoint script
+# Copy the entrypoint script and make it executable
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Set working directory
 WORKDIR /github/workspace
-
-# Switch to non-root user
-USER runner
 
 ENTRYPOINT ["/entrypoint.sh"]

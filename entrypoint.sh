@@ -47,7 +47,11 @@ echo_info "Build only: $BUILD_ONLY"
 echo_info "Norminette only: $NORMINETTE_ONLY"
 
 # Change to project directory
-cd "$GITHUB_WORKSPACE/$PROJECT_PATH"
+if [ "$PROJECT_PATH" = "." ]; then
+    cd "$GITHUB_WORKSPACE"
+else
+    cd "$GITHUB_WORKSPACE/$PROJECT_PATH"
+fi
 
 # Function to run norminette
 run_norminette() {
@@ -140,9 +144,16 @@ else
 fi
 
 # Set GitHub Actions outputs
-echo "norminette_status=$NORMINETTE_STATUS" >> $GITHUB_OUTPUT
-echo "build_status=$BUILD_STATUS" >> $GITHUB_OUTPUT
-echo "norminette_violations=$NORMINETTE_VIOLATIONS" >> $GITHUB_OUTPUT
+if [ -n "$GITHUB_OUTPUT" ] && [ -w "$(dirname "$GITHUB_OUTPUT")" ]; then
+    echo "norminette_status=$NORMINETTE_STATUS" >> $GITHUB_OUTPUT
+    echo "build_status=$BUILD_STATUS" >> $GITHUB_OUTPUT
+    echo "norminette_violations=$NORMINETTE_VIOLATIONS" >> $GITHUB_OUTPUT
+else
+    echo_warning "Cannot write to GITHUB_OUTPUT file, outputs will not be available"
+    echo_info "norminette_status=$NORMINETTE_STATUS"
+    echo_info "build_status=$BUILD_STATUS"
+    echo_info "norminette_violations=$NORMINETTE_VIOLATIONS"
+fi
 
 # Summary
 echo ""
