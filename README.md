@@ -100,7 +100,7 @@ jobs:
 | `strict_mode` | Fail the action if norminette finds any violations | No | `true` |
 | `build_only` | Only run build check, skip norminette | No | `false` |
 | `norminette_only` | Only run norminette, skip build check | No | `false` |
-| `with_minilibx` | Enable minilibx support for graphics projects (cub3d, so_long, fractol) | No | `false` |
+| `with_minilibx` | Enable minilibx support (`auto`=detect automatically, `true`=force enable, `false`=disable) | No | `auto` |
 
 ## Outputs
 
@@ -111,8 +111,6 @@ jobs:
 | `norminette_violations` | Number of norminette violations found |
 
 ## Example Workflows
-
-### For libft Project
 
 ```yaml
 name: Libft CI
@@ -134,27 +132,6 @@ jobs:
       with:
         project_path: '.'
         makefile_target: 'bonus'
-```
-
-### For cub3d Project
-
-```yaml
-name: Cub3D CI
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Check cub3d
-      uses: batuergun/ft_forge@v1
-      with:
-        project_path: '.'
-        makefile_target: 'all'
-        strict_mode: 'true'
-        with_minilibx: 'true'  # Enable graphics support
 ```
 
 ### Norminette Only (for code review)
@@ -192,23 +169,6 @@ jobs:
       uses: batuergun/ft_forge@v1
       with:
         build_only: 'true'
-```
-
-## Common 42 School Project Structures
-
-This action works with standard 42 School project structures:
-
-```
-your-project/
-├── Makefile
-├── src/
-│   ├── main.c
-│   └── utils.c
-├── include/
-│   └── project.h
-└── libft/
-    ├── Makefile
-    └── ...
 ```
 
 ## Supported Make Targets

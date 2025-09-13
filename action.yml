@@ -32,9 +32,9 @@ inputs:
     required: false
     default: 'false'
   with_minilibx:
-    description: 'Enable minilibx support for graphics projects (cub3d, so_long, fractol)'
+    description: 'Enable minilibx support (auto-detected by default, set to true/false to override)'
     required: false
-    default: 'false'
+    default: 'auto'
 
 outputs:
   norminette_status:

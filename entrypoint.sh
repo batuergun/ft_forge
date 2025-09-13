@@ -32,7 +32,7 @@ NORMINETTE_FLAGS="${INPUT_NORMINETTE_FLAGS:-""}"
 STRICT_MODE="${INPUT_STRICT_MODE:-"true"}"
 BUILD_ONLY="${INPUT_BUILD_ONLY:-"false"}"
 NORMINETTE_ONLY="${INPUT_NORMINETTE_ONLY:-"false"}"
-WITH_MINILIBX="${INPUT_WITH_MINILIBX:-"false"}"
+WITH_MINILIBX="${INPUT_WITH_MINILIBX:-"auto"}"
 
 # Initialize status variables
 NORMINETTE_STATUS="skipped"
@@ -123,7 +123,56 @@ run_build() {
         echo_warning "Clean target not available or failed"
     fi
     
-    # Set up minilibx environment if enabled
+    # Auto-detect minilibx usage if set to auto
+    if [ "$WITH_MINILIBX" = "auto" ]; then
+        echo_info "Auto-detecting minilibx usage..."
+        
+        # Check for minilibx directories
+        MINILIBX_DIRS_FOUND=""
+        for dir in minilibx minilibx-linux minilibx-macos lib/minilibx lib/minilibx-linux lib/minilibx-macos mlx lib/mlx; do
+            if [ -d "$dir" ]; then
+                MINILIBX_DIRS_FOUND="$MINILIBX_DIRS_FOUND $dir"
+            fi
+        done
+        
+        # Check for minilibx includes in C files
+        MINILIBX_INCLUDES_FOUND=""
+        if find . -name "*.c" -o -name "*.h" | grep -v -E "(minilibx|mlx)" | xargs grep -l "mlx\.h\|mlx_" 2>/dev/null | head -1 > /dev/null; then
+            MINILIBX_INCLUDES_FOUND="yes"
+        fi
+        
+        # Check Makefile for minilibx references
+        MAKEFILE_MLX_FOUND=""
+        if [ -f "Makefile" ] || [ -f "makefile" ]; then
+            if grep -q -E "(mlx|minilibx)" Makefile 2>/dev/null || grep -q -E "(mlx|minilibx)" makefile 2>/dev/null; then
+                MAKEFILE_MLX_FOUND="yes"
+            fi
+        fi
+        
+        # Auto-enable if minilibx detected
+        if [ -n "$MINILIBX_DIRS_FOUND" ] || [ -n "$MINILIBX_INCLUDES_FOUND" ] || [ -n "$MAKEFILE_MLX_FOUND" ]; then
+            echo_info "MinilibX detected! Auto-enabling graphics support..."
+            if [ -n "$MINILIBX_DIRS_FOUND" ]; then
+                echo_info "  - Found directories:$MINILIBX_DIRS_FOUND"
+            fi
+            if [ -n "$MINILIBX_INCLUDES_FOUND" ]; then
+                echo_info "  - Found mlx includes in source files"
+            fi
+            if [ -n "$MAKEFILE_MLX_FOUND" ]; then
+                echo_info "  - Found mlx references in Makefile"
+            fi
+            WITH_MINILIBX="true"
+        else
+            echo_info "No minilibx usage detected - using lightweight build"
+            WITH_MINILIBX="false"
+        fi
+    elif [ "$WITH_MINILIBX" = "true" ]; then
+        echo_info "MinilibX explicitly enabled"
+    elif [ "$WITH_MINILIBX" = "false" ]; then
+        echo_info "MinilibX explicitly disabled"
+    fi
+    
+    # Set up minilibx environment if enabled (auto or manual)
     if [ "$WITH_MINILIBX" = "true" ]; then
         echo_info "Setting up minilibx environment..."
         
