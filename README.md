@@ -136,7 +136,7 @@ jobs:
         makefile_target: 'bonus'
 ```
 
-### For cub3d/minishell Projects
+### For cub3d Project
 
 ```yaml
 name: Cub3D CI
