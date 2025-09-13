@@ -99,3 +99,26 @@ jobs:
           
         draft: false
         prerelease: false
+        
+  update-major-tag:
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Update major version tag
+      run: |
+        # Extract major version from tag (e.g., v1.1.4 -> v1)
+        TAG=${GITHUB_REF#refs/tags/}
+        MAJOR_VERSION=$(echo $TAG | cut -d. -f1)
+        
+        # Configure git
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # Update the major version tag
+        git tag -fa $MAJOR_VERSION -m "Update $MAJOR_VERSION tag to $TAG"
+        git push origin $MAJOR_VERSION --force
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
