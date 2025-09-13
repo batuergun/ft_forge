@@ -1,4 +1,4 @@
-name: '42 Norminette & Build Check'
+name: 'ft_forge'
 description: 'Runs norminette and build check for 42 projects'
 author: 'batuergun'
 
