@@ -15,26 +15,49 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
       
     - name: Get tag name
       id: get_tag
       run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       
+    - name: Get previous tag
+      id: prev_tag
+      run: |
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        echo "PREV_TAG=$PREV_TAG" >> $GITHUB_OUTPUT
+        
+    - name: Generate changelog
+      id: changelog
+      run: |
+        if [ -n "${{ steps.prev_tag.outputs.PREV_TAG }}" ]; then
+          CHANGELOG=$(git log --pretty=format:"- %s" ${{ steps.prev_tag.outputs.PREV_TAG }}..${{ steps.get_tag.outputs.TAG }} | head -20)
+        else
+          CHANGELOG=$(git log --pretty=format:"- %s" | head -20)
+        fi
+        
+        # Create multiline output
+        {
+          echo "CHANGELOG<<EOF"
+          echo "$CHANGELOG"
+          echo "EOF"
+        } >> $GITHUB_OUTPUT
+        
     - name: Create Release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ steps.get_tag.outputs.TAG }}
-        release_name: Release ${{ steps.get_tag.outputs.TAG }}
+        release_name: ft_forge ${{ steps.get_tag.outputs.TAG }}
         body: |
-          ## Changes in ${{ steps.get_tag.outputs.TAG }}
+          ## 42 Norminette & Build Check Action ${{ steps.get_tag.outputs.TAG }}
           
-          ### Features
-          - Norminette checking for 42 School C projects
-          - Build verification with Makefile
-          - Configurable options and targets
-          - Support for multiple project structures
+          Automated norminette checking and build verification for 42 School C projects.
+          
+          ### What's Changed
+          ${{ steps.changelog.outputs.CHANGELOG }}
           
           ### Usage
           ```yaml
@@ -45,7 +68,34 @@ jobs:
               strict_mode: 'true'
           ```
           
-          See the [README](https://github.com/batuergun/ft_forge/blob/main/README.md) for detailed usage instructions.
+          ### Quick Start Examples
+          
+          **Basic Usage:**
+          ```yaml
+          - name: Check norminette and build
+            uses: batuergun/ft_forge@${{ steps.get_tag.outputs.TAG }}
+          ```
+          
+          **Norminette Only:**
+          ```yaml
+          - name: Check code style
+            uses: batuergun/ft_forge@${{ steps.get_tag.outputs.TAG }}
+            with:
+              norminette_only: 'true'
+          ```
+          
+          **Build Only:**
+          ```yaml
+          - name: Test compilation
+            uses: batuergun/ft_forge@${{ steps.get_tag.outputs.TAG }}
+            with:
+              build_only: 'true'
+          ```
+          
+          ### Documentation
+          - [README](https://github.com/batuergun/ft_forge/blob/main/README.md) - Complete documentation
+          - [Examples](https://github.com/batuergun/ft_forge/tree/main/examples) - Workflow examples
+          - [Contributing](https://github.com/batuergun/ft_forge/blob/main/CONTRIBUTING.md) - Contribution guidelines
           
         draft: false
         prerelease: false
