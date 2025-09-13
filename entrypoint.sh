@@ -32,6 +32,7 @@ NORMINETTE_FLAGS="${INPUT_NORMINETTE_FLAGS:-""}"
 STRICT_MODE="${INPUT_STRICT_MODE:-"true"}"
 BUILD_ONLY="${INPUT_BUILD_ONLY:-"false"}"
 NORMINETTE_ONLY="${INPUT_NORMINETTE_ONLY:-"false"}"
+WITH_MINILIBX="${INPUT_WITH_MINILIBX:-"false"}"
 
 # Initialize status variables
 NORMINETTE_STATUS="skipped"
@@ -45,6 +46,7 @@ echo_info "Makefile target: $MAKEFILE_TARGET"
 echo_info "Strict mode: $STRICT_MODE"
 echo_info "Build only: $BUILD_ONLY"
 echo_info "Norminette only: $NORMINETTE_ONLY"
+echo_info "With minilibx: $WITH_MINILIBX"
 
 # Change to project directory
 if [ "$PROJECT_PATH" = "." ]; then
@@ -68,25 +70,33 @@ run_norminette() {
     NORMINETTE_OUTPUT=$(mktemp)
     
     # Run norminette and capture output
-    if norminette $NORMINETTE_FLAGS . > "$NORMINETTE_OUTPUT" 2>&1; then
-        echo_success "Norminette check passed!"
-        NORMINETTE_STATUS="passed"
-        cat "$NORMINETTE_OUTPUT"
-    else
-        echo_error "Norminette violations found:"
-        cat "$NORMINETTE_OUTPUT"
-        
-        # Count violations (each violation typically has an "Error" line)
-        NORMINETTE_VIOLATIONS=$(grep -c "Error" "$NORMINETTE_OUTPUT" || echo "0")
-        echo_info "Total violations found: $NORMINETTE_VIOLATIONS"
-        
-        NORMINETTE_STATUS="failed"
-        
-        if [ "$STRICT_MODE" = "true" ]; then
-            EXIT_CODE=1
+    # Create a list of files to check, excluding minilibx directories
+    FILES_TO_CHECK=$(find . -name "*.c" -o -name "*.h" | grep -v -E "(minilibx|mlx)" | tr '\n' ' ')
+    
+    if [ -n "$FILES_TO_CHECK" ]; then
+        if norminette $NORMINETTE_FLAGS $FILES_TO_CHECK > "$NORMINETTE_OUTPUT" 2>&1; then
+            echo_success "Norminette check passed!"
+            NORMINETTE_STATUS="passed"
+            cat "$NORMINETTE_OUTPUT"
         else
-            echo_warning "Norminette violations found but strict mode is disabled"
+            echo_error "Norminette violations found:"
+            cat "$NORMINETTE_OUTPUT"
+            
+            # Count violations (each violation typically has an "Error" line)
+            NORMINETTE_VIOLATIONS=$(grep -c "Error" "$NORMINETTE_OUTPUT" || echo "0")
+            echo_info "Total violations found: $NORMINETTE_VIOLATIONS"
+            
+            NORMINETTE_STATUS="failed"
+            
+            if [ "$STRICT_MODE" = "true" ]; then
+                EXIT_CODE=1
+            else
+                echo_warning "Norminette violations found but strict mode is disabled"
+            fi
         fi
+    else
+        echo_warning "No C files found to check with norminette (excluding minilibx)"
+        NORMINETTE_STATUS="skipped"
     fi
     
     # Clean up
@@ -113,6 +123,45 @@ run_build() {
         echo_warning "Clean target not available or failed"
     fi
     
+    # Set up minilibx environment if enabled
+    if [ "$WITH_MINILIBX" = "true" ]; then
+        echo_info "Setting up minilibx environment..."
+        
+        # Install X11 dependencies on-demand
+        echo_info "Installing X11 dependencies..."
+        apt-get update -qq > /dev/null 2>&1
+        apt-get install -y -qq \
+            xorg-dev \
+            libxext-dev \
+            libbsd-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxss-dev \
+            libglu1-mesa-dev \
+            freeglut3-dev \
+            mesa-common-dev \
+            xvfb \
+            > /dev/null 2>&1
+        
+        # Set up virtual display
+        echo_info "Starting virtual display..."
+        export DISPLAY=:99
+        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+        XVFB_PID=$!
+        sleep 2  # Give Xvfb time to start
+        echo_info "MinilibX environment ready (Display: $DISPLAY, PID: $XVFB_PID)"
+    else
+        # Skip minilibx directories if not enabled
+        MINILIBX_BACKUP=""
+        echo_info "MinilibX not enabled - excluding from build..."
+        for dir in minilibx minilibx-linux minilibx-macos lib/minilibx lib/minilibx-linux lib/minilibx-macos mlx lib/mlx; do
+            if [ -d "$dir" ]; then
+                mv "$dir" "${dir}.disabled" 2>/dev/null || true
+                MINILIBX_BACKUP="$MINILIBX_BACKUP $dir"
+            fi
+        done
+    fi
+    
     # Build the project
     echo_info "Building with target: $MAKEFILE_TARGET"
     if make "$MAKEFILE_TARGET"; then
@@ -127,6 +176,22 @@ run_build() {
         echo_error "Build failed!"
         BUILD_STATUS="failed"
         EXIT_CODE=1
+    fi
+    
+    # Restore minilibx directories if they were disabled
+    if [ "$WITH_MINILIBX" = "false" ] && [ -n "$MINILIBX_BACKUP" ]; then
+        echo_info "Restoring minilibx directories..."
+        for dir in $MINILIBX_BACKUP; do
+            if [ -d "${dir}.disabled" ]; then
+                mv "${dir}.disabled" "$dir" 2>/dev/null || true
+            fi
+        done
+    fi
+    
+    # Clean up virtual display
+    if [ "$WITH_MINILIBX" = "true" ] && [ -n "$XVFB_PID" ]; then
+        echo_info "Cleaning up virtual display..."
+        kill $XVFB_PID 2>/dev/null || true
     fi
 }
 

@@ -100,6 +100,7 @@ jobs:
 | `strict_mode` | Fail the action if norminette finds any violations | No | `true` |
 | `build_only` | Only run build check, skip norminette | No | `false` |
 | `norminette_only` | Only run norminette, skip build check | No | `false` |
+| `with_minilibx` | Enable minilibx support for graphics projects (cub3d, so_long, fractol) | No | `false` |
 
 ## Outputs
 
@@ -153,6 +154,7 @@ jobs:
         project_path: '.'
         makefile_target: 'all'
         strict_mode: 'true'
+        with_minilibx: 'true'  # Enable graphics support
 ```
 
 ### Norminette Only (for code review)

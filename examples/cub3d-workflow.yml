@@ -40,6 +40,7 @@ jobs:
         project_path: '.'
         makefile_target: 'all'
         build_only: 'true'
+        with_minilibx: 'true'  # Enable minilibx for graphics project
         
   full-check:
     runs-on: ubuntu-latest
@@ -55,3 +56,4 @@ jobs:
         project_path: '.'
         makefile_target: 'all'
         strict_mode: 'true'
+        with_minilibx: 'true'  # Enable minilibx for graphics project
