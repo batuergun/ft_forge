@@ -137,8 +137,14 @@ run_build() {
         
         # Check for minilibx includes in C files
         MINILIBX_INCLUDES_FOUND=""
-        if find . -name "*.c" -o -name "*.h" | grep -v -E "(minilibx|mlx)" | xargs grep -l "mlx\.h\|mlx_" 2>/dev/null | head -1 > /dev/null; then
-            MINILIBX_INCLUDES_FOUND="yes"
+        # Search for mlx patterns
+        C_FILES=$(find . -name "*.c" -o -name "*.h" | grep -v -E "/minilibx|/mlx")
+        if [ -n "$C_FILES" ]; then
+            FOUND_FILES=$(echo "$C_FILES" | xargs grep -l "mlx\.h\|mlx_" 2>/dev/null || true)
+            if [ -n "$FOUND_FILES" ]; then
+                MINILIBX_INCLUDES_FOUND="yes"
+                echo_info "  - MLX includes found in: $(echo $FOUND_FILES | tr '\n' ' ')"
+            fi
         fi
         
         # Check Makefile for minilibx references
