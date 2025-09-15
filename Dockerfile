@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     make \
     git \
     curl \
+    libreadline-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install norminette
