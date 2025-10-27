@@ -191,6 +191,23 @@ The action uses the standard norminette configuration. You can pass additional f
     norminette_flags: '-R CheckForbiddenSourceHeader -R CheckDefine'
 ```
 
+### Project Detection & Filtering
+
+#### Minishell Projects
+
+For **minishell** projects, `GLOBAL_VAR_DETECTED` warnings are automatically filtered out, as global variables are commonly used for signal handling (a standard practice in shell implementations).
+
+The action detects minishell projects by checking for:
+- `minishell.h` header file (in root, `includes/`, or `inc/` directories)
+- "minishell" references in Makefile
+- Directory name containing "minishell"
+
+When detected, you'll see:
+```
+[INFO] Minishell project detected - will ignore GLOBAL_VAR_DETECTED warnings
+[INFO] Filtered X GLOBAL_VAR_DETECTED warning(s) for minishell project
+```
+
 ## Error Handling
 
 - **Norminette Violations**: In strict mode (default), any norminette violation will fail the action

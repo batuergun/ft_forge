@@ -55,6 +55,18 @@ else
     cd "$GITHUB_WORKSPACE/$PROJECT_PATH"
 fi
 
+# Function to detect project type
+detect_project_type() {
+    # Check for minishell project indicators
+    if [ -f "minishell.h" ] || [ -f "includes/minishell.h" ] || [ -f "inc/minishell.h" ] || \
+       grep -q "minishell" Makefile 2>/dev/null || grep -q "minishell" makefile 2>/dev/null || \
+       [ "$(basename $(pwd))" = "minishell" ] || [ "$(basename $(pwd))" = "Minishell" ]; then
+        echo "minishell"
+        return 0
+    fi
+    echo "unknown"
+}
+
 # Function to run norminette
 run_norminette() {
     echo_info "Running norminette check..."
@@ -66,24 +78,49 @@ run_norminette() {
         return 0
     fi
     
+    # Detect project type
+    PROJECT_TYPE=$(detect_project_type)
+    if [ "$PROJECT_TYPE" = "minishell" ]; then
+        echo_info "Minishell project detected - will ignore GLOBAL_VAR_DETECTED warnings"
+    fi
+    
     # Create temporary file for norminette output
     NORMINETTE_OUTPUT=$(mktemp)
+    NORMINETTE_FILTERED=$(mktemp)
     
     # Run norminette and capture output
     # Create a list of files to check, excluding minilibx directories
     FILES_TO_CHECK=$(find . -name "*.c" -o -name "*.h" | grep -v -E "(minilibx|mlx)" | tr '\n' ' ')
     
     if [ -n "$FILES_TO_CHECK" ]; then
-        if norminette $NORMINETTE_FLAGS $FILES_TO_CHECK > "$NORMINETTE_OUTPUT" 2>&1; then
-            echo_success "Norminette check passed!"
-            NORMINETTE_STATUS="passed"
-            cat "$NORMINETTE_OUTPUT"
+        norminette $NORMINETTE_FLAGS $FILES_TO_CHECK > "$NORMINETTE_OUTPUT" 2>&1 || true
+        
+        # Filter output based on project type
+        if [ "$PROJECT_TYPE" = "minishell" ]; then
+            # Filter out GLOBAL_VAR_DETECTED notices for minishell projects
+            # Remove the notice lines and the preceding context
+            grep -v "GLOBAL_VAR_DETECTED" "$NORMINETTE_OUTPUT" > "$NORMINETTE_FILTERED" || cp "$NORMINETTE_OUTPUT" "$NORMINETTE_FILTERED"
         else
+            cp "$NORMINETTE_OUTPUT" "$NORMINETTE_FILTERED"
+        fi
+        
+        # Check if there are any remaining violations
+        if grep -q "Error" "$NORMINETTE_FILTERED"; then
             echo_error "Norminette violations found:"
-            cat "$NORMINETTE_OUTPUT"
+            cat "$NORMINETTE_FILTERED"
             
             # Count violations (each violation typically has an "Error" line)
-            NORMINETTE_VIOLATIONS=$(grep -c "Error" "$NORMINETTE_OUTPUT" || echo "0")
+            NORMINETTE_VIOLATIONS=$(grep -c "Error" "$NORMINETTE_FILTERED" || echo "0")
+            
+            # If we filtered anything for minishell, inform the user
+            if [ "$PROJECT_TYPE" = "minishell" ]; then
+                ORIGINAL_VIOLATIONS=$(grep -c "Error" "$NORMINETTE_OUTPUT" || echo "0")
+                FILTERED_COUNT=$((ORIGINAL_VIOLATIONS - NORMINETTE_VIOLATIONS))
+                if [ $FILTERED_COUNT -gt 0 ]; then
+                    echo_info "Filtered $FILTERED_COUNT GLOBAL_VAR_DETECTED warning(s) for minishell project"
+                fi
+            fi
+            
             echo_info "Total violations found: $NORMINETTE_VIOLATIONS"
             
             NORMINETTE_STATUS="failed"
@@ -93,6 +130,18 @@ run_norminette() {
             else
                 echo_warning "Norminette violations found but strict mode is disabled"
             fi
+        else
+            echo_success "Norminette check passed!"
+            NORMINETTE_STATUS="passed"
+            
+            # Show filtered output if there were any global var warnings that got filtered
+            if [ "$PROJECT_TYPE" = "minishell" ]; then
+                ORIGINAL_VIOLATIONS=$(grep -c "Error" "$NORMINETTE_OUTPUT" || echo "0")
+                if [ $ORIGINAL_VIOLATIONS -gt 0 ]; then
+                    echo_info "All violations were GLOBAL_VAR_DETECTED warnings (filtered for minishell)"
+                fi
+            fi
+            cat "$NORMINETTE_FILTERED"
         fi
     else
         echo_warning "No C files found to check with norminette (excluding minilibx)"
@@ -100,7 +149,7 @@ run_norminette() {
     fi
     
     # Clean up
-    rm -f "$NORMINETTE_OUTPUT"
+    rm -f "$NORMINETTE_OUTPUT" "$NORMINETTE_FILTERED"
 }
 
 # Function to run build

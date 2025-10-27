@@ -1,0 +1,31 @@
+name: Minishell CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  norminette-and-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Norminette & Build Check
+      uses: batuergun/ft_forge@v1
+      with:
+        project_path: '.'
+        makefile_target: 'all'
+        strict_mode: 'true'
+      # Note: GLOBAL_VAR_DETECTED warnings are automatically filtered
+      # for minishell projects (used for signal handling)
+      
+    - name: Display Results
+      if: always()
+      run: |
+        echo "Norminette Status: ${{ steps.check.outputs.norminette_status }}"
+        echo "Build Status: ${{ steps.check.outputs.build_status }}"
+
