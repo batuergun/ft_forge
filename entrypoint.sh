@@ -116,7 +116,7 @@ run_norminette() {
             if [ "$PROJECT_TYPE" = "minishell" ]; then
                 ORIGINAL_VIOLATIONS=$(grep -c "Error" "$NORMINETTE_OUTPUT" || echo "0")
                 FILTERED_COUNT=$((ORIGINAL_VIOLATIONS - NORMINETTE_VIOLATIONS))
-                if [ $FILTERED_COUNT -gt 0 ]; then
+                if [ "$FILTERED_COUNT" -gt 0 ]; then
                     echo_info "Filtered $FILTERED_COUNT GLOBAL_VAR_DETECTED warning(s) for minishell project"
                 fi
             fi
@@ -137,7 +137,7 @@ run_norminette() {
             # Show filtered output if there were any global var warnings that got filtered
             if [ "$PROJECT_TYPE" = "minishell" ]; then
                 ORIGINAL_VIOLATIONS=$(grep -c "Error" "$NORMINETTE_OUTPUT" || echo "0")
-                if [ $ORIGINAL_VIOLATIONS -gt 0 ]; then
+                if [ "$ORIGINAL_VIOLATIONS" -gt 0 ]; then
                     echo_info "All violations were GLOBAL_VAR_DETECTED warnings (filtered for minishell)"
                 fi
             fi
